@@ -1,0 +1,92 @@
+[
+    {
+        "id": "16222743-6",
+        "name": "Martin Gonzalez",
+        "address": "Fray Bentos 6034, Vitacura, Chile",
+        "lat": "-33.3739177",
+        "long": "-70.5849141",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "18901284-K",
+        "name": "Alfredo Vargas",
+        "address": "Badajoz 45, Las Condes, Chile",
+        "lat": "-33.4090849",
+        "long": "-70.5742001",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "12933201-7",
+        "name": "Luis Otrera",
+        "address": "Av Providencia 4500, Providencia, Chile",
+        "lat": "-33.4182663",
+        "long": "-70.6038629",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "13101455-9",
+        "name": "Felipe Hermosilla",
+        "address": "Matucana 100, Santiago, Chile",
+        "lat": "-33.4447114",
+        "long": "-70.6820594",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "14092817-3",
+        "name": "Maria Jesus Ortiz",
+        "address": "El Sauce Nte 1537, Huechuraba, Chile",
+        "lat": "-33.3603509",
+        "long": "-70.6790279",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "14432782-K",
+        "name": "Constanza Acuña",
+        "address": "Av Einstein 885, Recoleta, Chile",
+        "lat": "-33.4038458",
+        "long": "-70.6529594",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "99887766-5",
+        "name": "Juan Perez",
+        "address": "Alameda 1234, Santiago, Chile",
+        "lat": "-33.4430000",
+        "long": "-70.6540000",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "55443322-1",
+        "name": "Ana Maria Lopez",
+        "address": "Av. Apoquindo 4000, Las Condes, Chile",
+        "lat": "-33.4150000",
+        "long": "-70.5900000",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "11223344-9",
+        "name": "Carlos Ruiz",
+        "address": "Av. La Florida 9000, La Florida, Chile",
+        "lat": "-33.5350000",
+        "long": "-70.5500000",
+        "city": "Santiago",
+        "country": "Chile"
+    },
+    {
+        "id": "66778899-0",
+        "name": "Belen Soto",
+        "address": "Pajaritos 5000, Maipu, Chile",
+        "lat": "-33.4800000",
+        "long": "-70.7500000",
+        "city": "Santiago",
+        "country": "Chile"
+    }
+]
