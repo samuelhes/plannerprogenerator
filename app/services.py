@@ -3,191 +3,285 @@ import io
 import csv
 import json
 import random
+import requests
+import itertools
 from datetime import datetime
 from openpyxl import Workbook
 from .config import Config
 
+from flask import current_app
+
 class GenerationService:
     def __init__(self):
         # Load Resources on init
-        self._load_customers()
-        self._load_template_headers()
+        # Note: In a real production app, we might want to lazy load or cache these better,
+        # but for now, we'll log the init.
+        pass
+
+    def _get_logger(self):
+        # specific helper to access current_app logger safely
+        try:
+            return current_app.logger
+        except:
+             # Fallback for scripts running outside context if ever needed
+            import logging
+            return logging.getLogger(__name__)
 
     def _load_customers(self):
+        if hasattr(self, 'customers') and self.customers:
+            return
+
+        # 1. Try Google Sheet
+        sheet_data = self._load_from_sheet()
+        if sheet_data:
+            self._get_logger().info("Loaded addresses from Google Sheet.")
+            self.customers = sheet_data
+            return
+
+        # 2. Fallback to Local JSON
         try:
             with open(Config.CUSTOMERS_FILE, 'r', encoding='utf-8') as f:
                 self.customers = json.load(f)
+                self._get_logger().info("Loaded addresses from local JSON.")
         except Exception as e:
-            print(f"Error loading customers: {e}")
+            self._get_logger().error(f"Error loading customers from JSON: {e}")
             self.customers = []
 
     def _load_template_headers(self):
-        try:
-            with open(Config.TEMPLATE_FILE, 'r', encoding='utf-8-sig') as f:
-                reader = csv.reader(f, delimiter=';')
-                self.headers = list(filter(None, next(reader)))
-        except Exception as e:
-            print(f"Error loading CSV template: {e}")
-            self.headers = []
+        # Deprecated: Headers are now strictly enforced by code
+        pass
 
-    def generate_excel(self, params):
-        # Destructure params with safe defaults (validated by Frontend but be safe)
-        count = params.get('cantidad_ordenes', 40)
-        count = params.get('cantidad_ordenes', 40)
-        # Default Items to 1 if not present or 0
-        items_per_order = int(params.get('items_por_orden') or 1)
-        if items_per_order < 1: items_per_order = 1
-        # Capacity
-        cap_min = params.get('capacidad_min', 1)
-        cap_max = params.get('capacidad_max', 10)
+    def _get_localized_name(self, country_input):
+        # Database of names
+        LOCALE_DATA = {
+            "LATAM": {
+                "names": ["Juan", "Maria", "Carlos", "Ana", "Jose", "Luis", "Sofia", "Camila", "Pedro", "Diego"],
+                "surnames": ["Gonzalez", "Rodriguez", "Perez", "Fernandez", "Lopez", "Diaz", "Martinez", "Silva", "Rojas", "Soto"]
+            },
+            "US": {
+                "names": ["John", "Mary", "Michael", "Jennifer", "James", "Linda", "Robert", "Patricia", "David", "Elizabeth"],
+                "surnames": ["Smith", "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor"]
+            }
+        }
         
-        if cap_min > cap_max:
-             raise ValueError("Capacity Min cannot be greater than Capacity Max")
+        # Determine Region
+        c = country_input.lower()
+        if any(x in c for x in ["chile", "argentina", "colombia", "mexico", "peru", "bolivia", "uruguay", "ecuador", "venezuela", "paraguay"]):
+            region = "LATAM"
+        else:
+            region = "US" # Default/Global
+            
+        data = LOCALE_DATA[region]
+        return f"{random.choice(data['names'])} {random.choice(data['surnames'])}"
 
-        # Capacity 2 (Optional)
+    def generate_excel(self, params: dict):
+        # ... (Previous Resource Loading)
+        self._load_customers()
+        
+        # HEADERS (Strict)
+        HEADERS = [
+            "N° DOCUMENTO", "LATITUD", "LONGITUD", "DIRECCION", "NOMBRE ITEM", "CANTIDAD", "CODIGO ITEM",
+            "FECHA MIN ENTREGA", "FECHA MAX ENTREGA", "MIN VENTANA HORARIA 1", "MAX VENTANA HORARIA 1",
+            "MIN VENTANA HORARIA 2", "MAX VENTANA HORARIA 2", "COSTO ITEM", "CAPACIDAD UNO", "CAPACIDAD DOS",
+            "SERVICE TIME", "IMPORTANCIA", "IDENTIFICADOR CONTACTO", "NOMBRE CONTACTO", "TELEFONO", "EMAIL CONTACTO",
+            "CT ORIGEN", "" # Trailing semicolon header not needed in XLS per se, but user asked for strictness. 
+            # WAIT: If user wants .xlsx, they usually don't need a trailing semicolon *column*, they need the *data*.
+            # But "formato texto" might imply a CSV-like structure in XLS? 
+            # Standard Practice: In Excel, Columns are columns. 
+            # User Quote: "el sistema debe generar ambos archvios en .xlsx en, formato texto."
+            # and "semicolons delimiter" was for the CSV request. 
+            # Interpretation: Real Excel, Strict Headers, Text Cells. Trailing empty column is fine to match strictness.
+        ]
+
+        # Destructure params (Keep existing logic)
+        try:
+            count = int(params.get('cantidad_ordenes', 40))
+        except (ValueError, TypeError):
+            count = 40
+        try:
+            items_per_order = int(params.get('items_por_orden') or 1)
+        except (ValueError, TypeError):
+            items_per_order = 1
+        if items_per_order < 1: items_per_order = 1
+        try:
+            cap_min = float(params.get('capacidad_min', 1))
+            cap_max = float(params.get('capacidad_max', 10))
+        except (ValueError, TypeError):
+            cap_min = 1.0
+            cap_max = 10.0
+        if cap_min > cap_max:
+             cap_min, cap_max = cap_max, cap_min
         cap2_min = params.get('capacidad2_min')
         cap2_max = params.get('capacidad2_max')
-        
-        # Tags (Optional)
-        tags = params.get('tags', []) # List of {header, values}
-
-        # Windows
         win1_start = params.get('ventana_inicio', '09:00')
         win1_end = params.get('ventana_fin', '18:00')
         win2_start = params.get('ventana2_inicio')
         win2_end = params.get('ventana2_fin')
-        
-        
-        # Optional
         ct_origin = params.get('ct_origen')
-        
         if not ct_origin or str(ct_origin).strip() == "":
              raise ValueError("CT Origen is mandatory.")
         service_time = params.get('service_time')
-        
-        # Geo
         city_filter = params.get('ciudad', '')
         country_filter = params.get('pais', '')
         delivery_date = params.get('fecha_entrega', datetime.now().strftime('%Y-%m-%d'))
-
-        # Date formatting
         try:
             date_obj = datetime.strptime(delivery_date, '%Y-%m-%d')
             formatted_date = date_obj.strftime('%d/%m/%Y')
         except:
             formatted_date = delivery_date
 
-        # Filter customers
-        filtered_customers = [c for c in self.customers if 
-                              (city_filter.lower() in c.get('city', '').lower()) and 
-                              (country_filter.lower() in c.get('country', '').lower())]
-        
-        if not filtered_customers:
-            filtered_customers = self.customers # Fallback
+        # Filter customers (Keep existing logic)
+        filtered_customers = []
+        target_country = country_filter.lower().strip()
+        target_city = city_filter.lower().strip()
+        for c in self.customers:
+            c_country = c.get('country', '').lower().strip()
+            c_city = c.get('city', '').lower().strip()
+            if target_country and target_country not in c_country and "otro" not in target_country: continue
+            if target_city and "otro" not in target_city:
+                if target_city not in c_city: continue
+            filtered_customers.append(c)
+        if not filtered_customers: filtered_customers = self.customers
+        if not filtered_customers: raise ValueError("No customer data available.")
+        random.shuffle(filtered_customers)
+        customer_iterator = itertools.cycle(filtered_customers)
 
-        if not filtered_customers:
-             raise ValueError("No customer data available to generate orders.")
-
+        # WEBWORKBOOK GENERATION
         wb = Workbook()
         ws = wb.active
         ws.title = "Ordenes Generadas"
         
-        # Append Dynamic Headers
-        for tag in tags:
-            header_name = tag.get('header')
-            if header_name and header_name not in self.headers:
-                self.headers.append(header_name)
-        
-        ws.append(self.headers)
+        ws.append(HEADERS)
 
         global_item_counter = 1
 
         for i in range(count):
-            customer = random.choice(filtered_customers)
+            customer = next(customer_iterator)
+            contact_name = self._get_localized_name(customer.get('country', country_filter))
             order_id = f"ORD-{str(i+1).zfill(6)}"
-            
-            # Pre-calculate capacity for the whole order (shared across rows)
-             # Use uniform for float range. Format to 4 decimal places and replace dot with comma
             cap_val = random.uniform(cap_min, cap_max)
             cap_str = f"{cap_val:.4f}".replace('.', ',')
-
-            # Cap 2 Logic
             cap2_str = ""
             if cap2_min is not None and cap2_max is not None:
-                c2_val = random.uniform(cap2_min, cap2_max)
+                c2_val = random.uniform(float(cap2_min), float(cap2_max))
                 cap2_str = f"{c2_val:.4f}".replace('.', ',')
 
-            # Generate multiple rows if items_per_order > 1
             for j in range(items_per_order):
-                # Row dict
-                row = {h: "" for h in self.headers}
-
-                # --- Mapping Logic ---
-                
-                # 1. Customer Info (Shared)
-                row["N° DOCUMENTO"] = order_id
-                row["LATITUD"] = str(customer.get('lat', '')).replace('.', ',')
-                row["LONGITUD"] = str(customer.get('long', '')).replace('.', ',')
-                row["DIRECCION"] = customer.get('address', '')
-                
-                # Contact (Shared)
-                row["NOMBRE CONTACTO"] = customer.get('name', '')
-                row["IDENTIFICADOR CONTACTO"] = customer.get('id', '')
-                row["TELEFONO"] = f"+569{random.randint(11111111,99999999)}"
-                row["EMAIL CONTACTO"] = f"contacto{i}@example.com"
-
-                # 2. Items (Distinct per row)
-                row["NOMBRE ITEM"] = f"Item {global_item_counter}"
-                row["CODIGO ITEM"] = f"SKU-{global_item_counter}" 
-                row["CANTIDAD"] = "1" # 1 unit per line item
-                row["COSTO ITEM"] = "1500" # Unit cost
-                
+                row_map = {}
+                row_map["N° DOCUMENTO"] = order_id
+                row_map["LATITUD"] = str(customer.get('lat', '')).replace('.', ',')
+                row_map["LONGITUD"] = str(customer.get('long', '')).replace('.', ',')
+                row_map["DIRECCION"] = customer.get('address', '')
+                row_map["NOMBRE ITEM"] = f"Item {global_item_counter}"
+                row_map["CANTIDAD"] = "1"
+                row_map["CODIGO ITEM"] = f"SKU-{global_item_counter}"
+                row_map["COSTO ITEM"] = "1500"
                 global_item_counter += 1
+                row_map["FECHA MIN ENTREGA"] = formatted_date
+                row_map["FECHA MAX ENTREGA"] = formatted_date
+                row_map["MIN VENTANA HORARIA 1"] = win1_start
+                row_map["MAX VENTANA HORARIA 1"] = win1_end
+                row_map["MIN VENTANA HORARIA 2"] = win2_start if win2_start else ""
+                row_map["MAX VENTANA HORARIA 2"] = win2_end if win2_end else ""
+                row_map["CAPACIDAD UNO"] = cap_str
+                row_map["CAPACIDAD DOS"] = cap2_str
+                row_map["SERVICE TIME"] = str(service_time) if service_time else "5"
+                row_map["IMPORTANCIA"] = "1"
+                row_map["IDENTIFICADOR CONTACTO"] = customer.get('id', '')
+                row_map["NOMBRE CONTACTO"] = contact_name
+                row_map["TELEFONO"] = f"569{random.randint(11111111,99999999)}"
+                row_map["EMAIL CONTACTO"] = f"contacto{i}@example.com"
+                row_map["CT ORIGEN"] = ct_origin
+                row_map[""] = "" 
 
-                # 3. Capacity (Shared)
-                row["CAPACIDAD UNO"] = cap_str
-                row["CAPACIDAD DOS"] = cap2_str
-                
-                # 4. Windows (Shared)
-                row["FECHA MIN ENTREGA"] = formatted_date
-                row["FECHA MAX ENTREGA"] = formatted_date
-                row["MIN VENTANA HORARIA 1"] = win1_start
-                row["MAX VENTANA HORARIA 1"] = win1_end
-                
-                if win2_start and win2_end:
-                    row["MIN VENTANA HORARIA 2"] = win2_start
-                    row["MAX VENTANA HORARIA 2"] = win2_end
-                
-                # 5. Optional Fields (Shared)
-                if ct_origin:
-                    row["CT ORIGEN"] = ct_origin
-                else:
-                    row["CT ORIGEN"] = "CD DEFAULT"
-                    
-                if service_time is not None:
-                    row["SERVICE TIME"] = str(service_time)
-                else:
-                    row["SERVICE TIME"] = "5" # Default
+                row_values = [row_map.get(h, "") for h in HEADERS]
+                ws.append(row_values)
 
-                row["IMPORTANCIA"] = "1"
-                
-                # Dynamic Tags
-                for tag in tags:
-                    header = tag.get('header')
-                    values = tag.get('values', [])
-                    if header and values:
-                        row[header] = random.choice(values)
-
-                # Write Row
-                # Check for explicit City/Country columns (if template has them) - Best effort
-                if "CIUDAD" in self.headers:
-                    row["CIUDAD"] = city_filter
-                if "PAIS" in self.headers:
-                    row["PAIS"] = country_filter
-
-                ws.append([row.get(h, "") for h in self.headers])
+        # FORCE TEXT FORMAT
+        for row in ws.iter_rows():
+            for cell in row:
+                cell.number_format = '@'
 
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
         return output, f"ordenes_{count}.xlsx"
+
+    def generate_vehicles_excel(self, vehicle_groups):
+        """
+        Generates a fleet Excel file (.xlsx) with Text Format.
+        """
+        HEADERS = [
+            "PLACA", "ORIGEN", "DESTINO", "CAPACIDAD UNO", "CAPACIDAD DOS", 
+            "HORA INICIO JORNADA", "HORA FIN JORNADA", "INICIO HORA DESCANSO", 
+            "FIN HORA DESCANSO", "COSTO POR SALIDA", "COSTO POR KILOMETRO", 
+            "COSTO POR HORA", "COSTO FIJO", "MAXIMA CANTIDAD DE ENTREGAS POR RECORRIDO", 
+            "MAXIMO TIEMPO DE MANEJO [HORAS]", "MAXIMA CANTIDAD DE RECORRIDOS", 
+            "DISTANCIA MAXIMA POR RECORRIDO [KILOMETROS]", "VELOCIDAD VEHICULO", 
+            "PERIODO DE RECARGA [HORAS]", "MAXIMO DE DINERO", "NO CONSIDERAR RETORNO AL CD",
+            "" 
+        ]
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Flota Generada"
+        ws.append(HEADERS)
+        
+        prefix_map = { "Moto": "MOTO", "Auto": "AUTO", "Camion": "CAMI", "Bici": "BICI", "Otro": "OTRO" }
+        counters = {k: 0 for k in prefix_map.values()}
+        
+        for group in vehicle_groups:
+            v_type = group.get('type', 'Otro')
+            count = int(group.get('count', 0))
+            cap1 = group.get('capacity1', '')
+            cap2 = group.get('capacity2', '')
+            origin = group.get('origin', '')
+            start_time = group.get('start_time', '')
+            end_time = group.get('end_time', '')
+            
+            prefix = prefix_map.get(v_type, "OTRO")
+            if v_type not in prefix_map: 
+                prefix = v_type[:4].upper()
+                if prefix not in counters: counters[prefix] = 0
+
+            for _ in range(count):
+                counters[prefix] += 1
+                sequence = counters[prefix]
+                plate = f"{prefix}{str(sequence).zfill(2)}"
+                
+                row_map = {
+                    "PLACA": plate,
+                    "ORIGEN": origin,
+                    "DESTINO": "",
+                    "CAPACIDAD UNO": str(cap1).replace('.', ',') if cap1 else "",
+                    "CAPACIDAD DOS": str(cap2).replace('.', ',') if cap2 else "",
+                    "HORA INICIO JORNADA": start_time,
+                    "HORA FIN JORNADA": end_time,
+                    "INICIO HORA DESCANSO": "",
+                    "FIN HORA DESCANSO": "",
+                    "COSTO POR SALIDA": "1000",
+                    "COSTO POR KILOMETRO": "333",
+                    "COSTO POR HORA": "11",
+                    "COSTO FIJO": "666",
+                    "MAXIMA CANTIDAD DE ENTREGAS POR RECORRIDO": "111",
+                    "MAXIMO TIEMPO DE MANEJO [HORAS]": "20",
+                    "MAXIMA CANTIDAD DE RECORRIDOS": "4",
+                    "DISTANCIA MAXIMA POR RECORRIDO [KILOMETROS]": "500",
+                    "VELOCIDAD VEHICULO": "Normal",
+                    "PERIODO DE RECARGA [HORAS]": "0,25",
+                    "MAXIMO DE DINERO": "5500000",
+                    "NO CONSIDERAR RETORNO AL CD": "1",
+                    "": ""
+                }
+                row_values = [row_map.get(h, "") for h in HEADERS]
+                ws.append(row_values)
+
+        # FORCE TEXT FORMAT
+        for row in ws.iter_rows():
+            for cell in row:
+                cell.number_format = '@'
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return output, "flota_vehiculos.xlsx"

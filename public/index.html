@@ -19,10 +19,74 @@
                 <i class="ph-bold ph-truck"></i>
             </div>
             <h1 class="app-title">Generador de Órdenes</h1>
-            <p class="app-subtitle">Planner Pro World Class Edition</p>
-        </header>
+            <p class="app-subtitle">Generador de Datos para Pruebas y Simulaciones</p>
+            <button id="openTutorialBtn" class="btn-text">
+                <i class="ph-bold ph-question"></i> ¿Cómo funciona?
+            </button>
+    </div>
 
-        <main class="main-card">
+    <!-- Tutorial Modal -->
+    <div id="tutorialModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button id="closeTutorialBtn" class="close-modal"><i class="ph-bold ph-x"></i></button>
+
+            <div class="tutorial-header">
+                <div class="tutorial-icon"><i class="ph-duotone ph-book-open-text"></i></div>
+                <h3>Guía de Uso</h3>
+            </div>
+
+            <div class="tutorial-body">
+                <div class="tutorial-section">
+                    <h4><i class="ph-fill ph-package"></i> 1. Generar Órdenes</h4>
+                    <p>Crea un archivo Excel con un listado de pedidos para importar en PlannerPro.</p>
+                    <ul>
+                        <li><strong>Geo-referenciación:</strong> Puedes filtrar clientes por País y Ciudad. El sistema
+                            asignará coordenadas lat/long reales de nuestra base de datos.</li>
+                        <li><strong>Round Robin:</strong> Si eliges una ciudad, los pedidos se distribuirán
+                            aleatoriamente entre los puntos de esa ciudad.</li>
+                        <li><strong>Tags Dinámicos:</strong> Agrega columnas extra (ej: <code>Tipo_Servicio</code>,
+                            <code>Prioridad</code>) con valores aleatorios.
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tutorial-section">
+                    <h4><i class="ph-fill ph-truck"></i> 2. Generar Vehículos</h4>
+                    <p>Crea la flota necesaria para tus simulaciones.</p>
+                    <ul>
+                        <li><strong>Configuración Mixta:</strong> Define cuántos camiones, autos o motos necesitas.</li>
+                        <li><strong>Datos por Defecto:</strong> El sistema rellena automáticamente costos, velocidades y
+                            restricciones (con valores realistas o vacíos según el estándar) para que solo tengas que
+                            preocuparte por la cantidad y el tipo.</li>
+                        <li><strong>Origen Obligatorio:</strong> Cada grupo de vehículos debe tener un <strong>Centro de
+                                Distribución (Origen)</strong> asignado.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="tutorial-footer">
+                <button class="btn-primary" id="gotItBtn" style="width: auto; margin:0 auto;">¡Entendido!</button>
+            </div>
+        </div>
+    </div>
+    <p class="app-subtitle">Planner Pro World Class Edition</p>
+    </header>
+
+    <main class="main-card">
+        <!-- Tabs -->
+        <div class="tabs-container"
+            style="display: flex; gap: 1rem; border-bottom: 2px solid var(--slate-100); margin-bottom: 2rem;">
+            <button class="tab-btn active" data-target="orderForm"
+                style="padding: 0.75rem 1.5rem; font-weight: 600; background: none; border: none; border-bottom: 2px solid var(--primary-600); color: var(--primary-700); cursor: pointer;">
+                Generar Órdenes
+            </button>
+            <button class="tab-btn" data-target="vehicleForm"
+                style="padding: 0.75rem 1.5rem; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--slate-500); cursor: pointer;">
+                Generar Vehículos
+            </button>
+        </div>
+
+        <div id="orderForm" class="tab-content">
             <form id="generateForm">
                 <div class="form-grid">
                     <!-- Section: General -->
@@ -114,7 +178,8 @@
                 <!-- Advanced Options -->
                 <details
                     style="margin-top: 2rem; background: var(--slate-50); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
-                    <summary style="cursor: pointer; font-weight: 600; color: var(--primary-600);">Opciones Avanzadas
+                    <summary style="cursor: pointer; font-weight: 600; color: var(--primary-600);">Opciones
+                        Avanzadas
                         (Opcional)</summary>
                     <div class="form-grid" style="margin-top: 1rem;">
                         <div class="form-group">
@@ -151,7 +216,8 @@
                 <div style="margin-top: 2rem; border-top: 1px solid var(--slate-200); padding-top: 1.5rem;">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--slate-800);">Tags Dinámicos</h3>
+                        <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--slate-800);">Tags Dinámicos
+                        </h3>
                         <button type="button" id="addTagBtn" class="btn-secondary"
                             style="font-size: 0.9rem; padding: 0.5rem 1rem;">
                             <i class="ph-bold ph-plus"></i> Añadir Tag
@@ -167,41 +233,169 @@
                     <i class="ph-bold ph-download-simple"></i>
                 </button>
             </form>
+        </div>
 
-            <!-- Template for Tag Item (Hidden) -->
-            <template id="tagTemplate">
-                <div class="tag-card"
-                    style="background: white; border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 1rem; position: relative;">
-                    <button type="button" class="remove-tag-btn"
-                        style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--slate-400); cursor: pointer;">
-                        <i class="ph-bold ph-x"></i>
-                    </button>
+        <!-- Vehicle Generator Form (Static Layout) -->
+        <div id="vehicleForm" class="tab-content" style="display: none;">
+            <form id="generateVehiclesForm">
+                <!-- Main Static Group -->
+                <div class="form-grid vehicle-static-group">
+
+                    <!-- Row 1: Cantidad | Tipo -->
                     <div class="form-group">
-                        <label class="form-label">Nombre de Categoría (Header)</label>
-                        <input type="text" class="form-input tag-header" placeholder="EJ: TIPO_VEHICULO" required>
+                        <label class="form-label">Cantidad de Vehículos <span style="color:red">*</span></label>
+                        <input type="number" class="form-input v-count" min="1" value="40" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Vehículo <span style="color:red">*</span></label>
+                        <div style="position: relative;">
+                            <i class="ph ph-truck"
+                                style="position: absolute; left: 12px; top: 12px; color: var(--slate-400);"></i>
+                            <select class="form-input v-type" style="padding-left: 2.5rem;" required>
+                                <option value="Camion" selected>Camión</option>
+                                <option value="Auto">Auto</option>
+                                <option value="Moto">Moto</option>
+                                <option value="Bici">Bici</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Capacidades -->
+                    <div class="form-group">
+                        <label class="form-label">Capacidad 1 (Kg/m3) <span style="color:red">*</span></label>
+                        <input type="number" class="form-input v-cap1" value="1000" required step="0.001">
                     </div>
                     <div class="form-group">
-                        <label class="form-label" style="display: flex; justify-content: space-between;">
-                            Valores Posibles <small style="color: var(--slate-500);">(Se elegirá uno al azar)</small>
-                        </label>
-                        <div class="tag-values-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            <!-- Values injected here -->
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="text" class="form-input tag-value" placeholder="Valor 1" required>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-secondary add-value-btn"
-                            style="margin-top: 0.5rem; width: 100%; justify-content: center; font-size: 0.8rem;">
-                            <i class="ph-bold ph-plus"></i> Agregar Valor
-                        </button>
+                        <label class="form-label">Capacidad 2 (Opcional)</label>
+                        <input type="number" class="form-input v-cap2" placeholder="Opcional" step="0.001">
+                    </div>
+
+                    <!-- Row 3: Windows -->
+                    <div class="form-group">
+                        <label class="form-label">Inicio Jornada <span style="color:red">*</span></label>
+                        <input type="text" class="form-input time-picker v-start" value="08:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fin Jornada <span style="color:red">*</span></label>
+                        <input type="text" class="form-input time-picker v-end" value="18:00" required>
+                    </div>
+
+                    <!-- Row 4: Origin -->
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label">Origen (Bodega) <span style="color:red">*</span></label>
+                        <input type="text" class="form-input v-origin" placeholder="Ej: CD Central" required>
                     </div>
                 </div>
-            </template>
-        </main>
 
-        <footer class="app-footer">
-            <p>&copy; 2025 Planner Pro Generator V3. Powered by Antigravity.</p>
-        </footer>
+                <!-- Add More Section -->
+                <div id="additionalGroupsContainer"
+                    style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+                    <!-- Additional groups injected here -->
+                </div>
+
+                <button type="button" id="addVehicleGroupBtn" class="btn-secondary"
+                    style="margin-top: 1.5rem; width: 100%; border-style: dashed;">
+                    <i class="ph-bold ph-plus-circle"></i> Agregar Otro Tipo de Vehículo
+                </button>
+
+                <button type="submit" class="btn-primary" style="margin-top: 2rem;">
+                    <span>Generar Flota (.xlsx)</span>
+                    <i class="ph-bold ph-truck"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Template for Tag Item (Hidden) -->
+        <template id="tagTemplate">
+            <div class="tag-card"
+                style="background: white; border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 1rem; position: relative;">
+                <button type="button" class="remove-tag-btn"
+                    style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--slate-400); cursor: pointer;">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+                <div class="form-group">
+                    <label class="form-label">Nombre de Categoría (Header)</label>
+                    <input type="text" class="form-input tag-header" placeholder="EJ: TIPO_VEHICULO" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between;">
+                        Valores Posibles <small style="color: var(--slate-500);">(Se elegirá uno al azar)</small>
+                    </label>
+                    <div class="tag-values-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Values injected here -->
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" class="form-input tag-value" placeholder="Valor 1" required>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary add-value-btn"
+                        style="margin-top: 0.5rem; width: 100%; justify-content: center; font-size: 0.8rem;">
+                        <i class="ph-bold ph-plus"></i> Agregar Valor
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <!-- Template for Vehicle Group (Card Style for additional items) -->
+        <template id="vehicleGroupTemplate">
+            <div class="vehicle-group-card"
+                style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 1.5rem; position: relative; animation: slideIn 0.3s ease-out;">
+
+                <button type="button" class="remove-group-btn"
+                    style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--error-700); cursor: pointer;"
+                    title="Eliminar">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+
+                <h5 style="margin: 0 0 1rem 0; color: var(--navy-main); font-weight: 600;">Grupo Adicional</h5>
+
+                <div class="form-grid">
+                    <!-- Type and Count -->
+                    <div class="form-group">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" class="form-input v-count" min="1" value="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-input v-type" required>
+                            <option value="Camion">Camión</option>
+                            <option value="Auto">Auto</option>
+                            <option value="Moto">Moto</option>
+                            <option value="Bici">Bici</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <!-- Mini Grid for others -->
+                    <div class="form-group">
+                        <label class="form-label">Capacidad 1</label>
+                        <input type="number" class="form-input v-cap1" required step="0.001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Origen</label>
+                        <input type="text" class="form-input v-origin" required>
+                    </div>
+
+                    <!-- Hidden defaults for simplicity in additional cards, or full fields? -->
+                    <!-- Let's keep full fields but compacted -->
+                    <div class="form-group">
+                        <label class="form-label">Inicio</label>
+                        <input type="text" class="form-input time-picker v-start" value="08:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fin</label>
+                        <input type="text" class="form-input time-picker v-end" value="18:00" required>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </main>
+
+    <footer class="app-footer">
+        <p>&copy; 2025 Planner Pro Generator V3. Powered by Antigravity. <span
+                style="opacity: 0.6; margin-left:10px; font-size: 0.85em;">v1.1.0</span></p>
+    </footer>
     </div>
     <div id="toastContainer" class="toast-container"></div>
     <script src="script.js"></script>

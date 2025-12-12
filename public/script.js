@@ -11,6 +11,60 @@ const geoData = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ---------------------------------------------------------
+    // TUTORIAL MODAL
+    // ---------------------------------------------------------
+    const modal = document.getElementById('tutorialModal');
+    const openBtn = document.getElementById('openTutorialBtn');
+    const closeBtn = document.getElementById('closeTutorialBtn');
+    const gotItBtn = document.getElementById('gotItBtn');
+
+    function toggleModal(show) {
+        modal.style.display = show ? 'flex' : 'none';
+        if (show) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = '';
+    }
+
+    if (openBtn) openBtn.addEventListener('click', () => toggleModal(true));
+    if (closeBtn) closeBtn.addEventListener('click', () => toggleModal(false));
+    if (gotItBtn) gotItBtn.addEventListener('click', () => toggleModal(false));
+
+    // Close on click outside
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) toggleModal(false);
+    });
+
+
+    // ---------------------------------------------------------
+    // TABS LOGIC
+    // ---------------------------------------------------------
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.style.display = 'none');
+
+            // Add active
+            btn.classList.add('active');
+            btn.style.borderColor = 'var(--primary-600)';
+            btn.style.color = 'var(--primary-700)';
+
+            // Reset others style
+            tabBtns.forEach(b => {
+                if (b !== btn) {
+                    b.style.borderColor = 'transparent';
+                    b.style.color = 'var(--slate-500)';
+                }
+            });
+
+            const targetId = btn.getAttribute('data-target');
+            document.getElementById(targetId).style.display = 'block';
+        });
+    });
+
     // 1. Initialize Flatpickr for Time Inputs
     flatpickr(".time-picker", {
         enableTime: true,
@@ -113,10 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagTemplate = document.getElementById('tagTemplate');
 
     if (addTagBtn && tagsContainer && tagTemplate) {
-        console.log("Tag Builder Initialized"); // Debug
 
         addTagBtn.addEventListener('click', () => {
-            console.log("Adding Tag Group...");
             const clone = tagTemplate.content.cloneNode(true);
             const card = clone.querySelector('.tag-card');
 
@@ -160,8 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            console.log("Form Submitting...");
-
             // Validation
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
@@ -288,6 +338,121 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ---------------------------------------------------------
+    // VEHICLE GENERATOR LOGIC
+    // ---------------------------------------------------------
+    const addVehicleGroupBtn = document.getElementById('addVehicleGroupBtn');
+    const additionalGroupsContainer = document.getElementById('additionalGroupsContainer');
+    const vehicleGroupTemplate = document.getElementById('vehicleGroupTemplate');
+    const vehicleForm = document.getElementById('generateVehiclesForm');
+
+    // 1. Logic to Add Additional Groups
+    if (addVehicleGroupBtn && additionalGroupsContainer && vehicleGroupTemplate) {
+        addVehicleGroupBtn.addEventListener('click', () => {
+            const clone = vehicleGroupTemplate.content.cloneNode(true);
+            const card = clone.querySelector('.vehicle-group-card');
+
+            // Init Flatpickr for new card
+            flatpickr(card.querySelectorAll('.time-picker'), {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                time_24hr: true,
+            });
+
+            // Remove Button
+            card.querySelector('.remove-group-btn').addEventListener('click', () => {
+                card.remove();
+            });
+
+            additionalGroupsContainer.appendChild(card);
+        });
+    }
+
+    // 2. Submit Logic (Static Group + Dynamic Groups)
+    if (vehicleForm) {
+        vehicleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = vehicleForm.querySelector('button[type="submit"]');
+
+            // Loading
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="spinner"></div> Generando...';
+
+            try {
+                const groups = [];
+
+                // A. Collect Main Static Group
+                const mainGroup = vehicleForm.querySelector('.vehicle-static-group');
+                groups.push(collectGroupData(mainGroup));
+
+                // B. Collect Additional Groups
+                const cards = additionalGroupsContainer.querySelectorAll('.vehicle-group-card');
+                for (const card of cards) {
+                    groups.push(collectGroupData(card));
+                }
+
+                if (groups.length === 0) {
+                    // Should not happen as static is always there
+                    throw new Error("Debe configurar la flota.");
+                }
+
+                const response = await fetch('/api/generate-vehicles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groups })
+                });
+
+                if (!response.ok) {
+                    const errJson = await response.json();
+                    throw new Error(errJson.error || 'Error generando vehículos');
+                }
+
+                // Download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = `flota_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                showToast("¡Flota generada exitosamente!", "success");
+
+            } catch (error) {
+                console.error(error);
+                showToast(error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+    }
+
+    function collectGroupData(element) {
+        const type = element.querySelector('.v-type').value;
+        const count = parseInt(element.querySelector('.v-count').value);
+        const cap1 = parseFloat(element.querySelector('.v-cap1').value);
+        const cap2Val = element.querySelector('.v-cap2') ? element.querySelector('.v-cap2').value : null;
+        const cap2 = cap2Val ? parseFloat(cap2Val) : null;
+        const origin = element.querySelector('.v-origin').value;
+        const start = element.querySelector('.v-start').value;
+        const end = element.querySelector('.v-end').value;
+
+        // Validations
+        if (start >= end) {
+            throw new Error(`En el grupo ${type}: Inicio Jornada debe ser menor a Fin Jornada.`);
+        }
+
+        return {
+            type, count, capacity1: cap1, capacity2: cap2, origin, start_time: start, end_time: end
+        };
+    }
+
     function setLoading(isLoading) {
         if (submitBtn) {
             submitBtn.disabled = isLoading;
@@ -321,12 +486,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         container.appendChild(toast);
 
-        // Remove after 4 seconds
+        // Remove after 8 seconds (enough to read)
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transform = 'translateY(10px)';
             toast.style.transition = 'all 0.3s';
             setTimeout(() => toast.remove(), 300);
-        }, 4000);
+        }, 8000);
     }
 });
