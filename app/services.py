@@ -84,13 +84,7 @@ class GenerationService:
             "FECHA MIN ENTREGA", "FECHA MAX ENTREGA", "MIN VENTANA HORARIA 1", "MAX VENTANA HORARIA 1",
             "MIN VENTANA HORARIA 2", "MAX VENTANA HORARIA 2", "COSTO ITEM", "CAPACIDAD UNO", "CAPACIDAD DOS",
             "SERVICE TIME", "IMPORTANCIA", "IDENTIFICADOR CONTACTO", "NOMBRE CONTACTO", "TELEFONO", "EMAIL CONTACTO",
-            "CT ORIGEN", "" # Trailing semicolon header not needed in XLS per se, but user asked for strictness. 
-            # WAIT: If user wants .xlsx, they usually don't need a trailing semicolon *column*, they need the *data*.
-            # But "formato texto" might imply a CSV-like structure in XLS? 
-            # Standard Practice: In Excel, Columns are columns. 
-            # User Quote: "el sistema debe generar ambos archvios en .xlsx en, formato texto."
-            # and "semicolons delimiter" was for the CSV request. 
-            # Interpretation: Real Excel, Strict Headers, Text Cells. Trailing empty column is fine to match strictness.
+            "CT ORIGEN"
         ]
 
         # Destructure params (Keep existing logic)
@@ -191,8 +185,7 @@ class GenerationService:
                 row_map["NOMBRE CONTACTO"] = contact_name
                 row_map["TELEFONO"] = f"569{random.randint(11111111,99999999)}"
                 row_map["EMAIL CONTACTO"] = f"contacto{i}@example.com"
-                row_map["CT ORIGEN"] = ct_origin
-                row_map[""] = "" 
+                row_map["CT ORIGEN"] = ct_origin 
 
                 row_values = [row_map.get(h, "") for h in HEADERS]
                 ws.append(row_values)

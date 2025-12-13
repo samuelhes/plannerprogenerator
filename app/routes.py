@@ -16,7 +16,7 @@ def generate():
         
         return send_file(
             file_stream,
-            mimetype='text/csv',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
             download_name=filename
         )

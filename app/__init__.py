@@ -1,5 +1,9 @@
 from flask import Flask, send_from_directory, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 from .config import Config, configure_logging
+from .middleware import SecurityHeadersMiddleware, RequestLoggingMiddleware
 
 def create_app():
     app = Flask(__name__, static_folder=Config.PUBLIC_DIR)
@@ -8,6 +12,33 @@ def create_app():
     # Configure Logging
     configure_logging(app)
     app.logger.info("Planner Pro Generator V3 Starting...")
+    
+    # Security: CORS Configuration
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["https://plannerprogenerator.onrender.com", "http://localhost:*"],
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type"],
+            "max_age": 3600
+        }
+    })
+    
+    # Security: Rate Limiting
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour"],
+        storage_uri="memory://"
+    )
+    
+    # Apply specific limits to API endpoints
+    @limiter.limit("30 per minute")
+    def rate_limited_api():
+        pass
+    
+    # Security Middleware
+    SecurityHeadersMiddleware(app)
+    RequestLoggingMiddleware(app)
     
     # Register API Blueprint
     from .routes import api_bp
@@ -24,11 +55,12 @@ def create_app():
     # Health Checks (World Class Standard)
     @app.route('/healthz')
     def healthz():
-        return jsonify({"status": "ok"}), 200
+        return jsonify({"status": "ok", "version": "2.5.0"}), 200
 
     @app.route('/readyz')
     def readyz():
-        return jsonify({"status": "ready"}), 200
+        # Could add more complex readiness checks here
+        return jsonify({"status": "ready", "version": "2.5.0"}), 200
 
     return app
 

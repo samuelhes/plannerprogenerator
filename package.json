@@ -1,6 +1,6 @@
 {
     "name": "planner-pro-generator-v2",
-    "version": "1.1.1",
+    "version": "2.5.0",
     "description": "Full stack order generator for Planner Pro",
     "main": "server.js",
     "scripts": {
