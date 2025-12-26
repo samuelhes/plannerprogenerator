@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Still good practice -->
+    <title>DispatchTrack | Planner Pro Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div class="brand">
+            <i class="ph-fill ph-hexagon brand-logo"></i>
+            <span class="brand-name">DispatchTrack</span>
+        </div>
+
+        <nav class="nav-menu">
+            <button class="nav-item active tab-btn" data-target="orderFormArea"
+                onclick="updateTitle('Generador de Órdenes', 'Simula pedidos para optimización de rutas')">
+                <i class="ph-bold ph-package"></i>
+                Generar Órdenes
+            </button>
+            <button class="nav-item tab-btn" data-target="vehicleFormArea"
+                onclick="updateTitle('Generador de Flota', 'Configura la flota de vehículos disponible')">
+                <i class="ph-bold ph-truck"></i>
+                Generar Vehículos
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div
+                style="display: flex; align-items: center; gap: 0.5rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem;">
+                <i class="ph-bold ph-user-circle"></i>
+                <span style="font-size: 0.85rem;">Usuario Planner</span>
+            </div>
+            <span class="version-tag">v2.6.3 Enterprise</span>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Header -->
+        <header class="content-header">
+            <div>
+                <h1 class="page-title" id="pageTitle">Generador de Órdenes</h1>
+                <p class="page-desc" id="pageDesc">Simula pedidos para optimización de rutas</p>
+            </div>
+            <div>
+                <!-- Extra actions if needed -->
+            </div>
+        </header>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+
+            <!-- LEFT PANEL: FORMS -->
+            <div class="form-panel">
+
+                <!-- ORDER FORM AREA -->
+                <div id="orderFormArea" class="tab-content card">
+                    <div class="card-header">
+                        <span class="card-title"><i class="ph-bold ph-sliders-horizontal"></i> Configuración de
+                            Datos</span>
+                    </div>
+
+                    <form id="generateForm">
+                        <div class="form-grid">
+                            <!-- Basic Config -->
+                            <div class="form-group">
+                                <label class="form-label" for="cantidad_ordenes">Cantidad de Órdenes <span
+                                        style="color:red">*</span></label>
+                                <input type="number" id="cantidad_ordenes" name="cantidad_ordenes" class="form-input"
+                                    value="50" min="1" max="5000" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="ct_origen">Centro de Distribución <span
+                                        style="color:red">*</span></label>
+                                <input type="text" id="ct_origen" name="ct_origen" class="form-input"
+                                    placeholder="Ej: CD Lampa" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="pais">País</label>
+                                <div style="position: relative;">
+                                    <select id="pais" name="pais" class="form-input">
+                                        <!-- JS Populated -->
+                                    </select>
+                                </div>
+                                <input type="text" id="pais_otro" name="pais_otro" class="form-input"
+                                    style="margin-top:0.5rem; display:none;" placeholder="Otro País">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="ciudad">Ciudad</label>
+                                <div style="position: relative;">
+                                    <select id="ciudad" name="ciudad" class="form-input">
+                                        <!-- JS Populated -->
+                                    </select>
+                                </div>
+                                <input type="text" id="ciudad_otro" name="ciudad_otro" class="form-input"
+                                    style="margin-top:0.5rem; display:none;" placeholder="Otra Ciudad">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="fecha_entrega">Fecha de Entrega <span
+                                        style="color:red">*</span></label>
+                                <input type="date" id="fecha_entrega" name="fecha_entrega" class="form-input" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Service Time (min)</label>
+                                <input type="number" id="service_time" name="service_time" class="form-input"
+                                    placeholder="Ej: 15">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Ventana 1 Inicio <span style="color:red">*</span></label>
+                                <input type="text" id="ventana_inicio" name="ventana_inicio"
+                                    class="form-input time-picker" value="09:00" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Ventana 1 Fin <span style="color:red">*</span></label>
+                                <input type="text" id="ventana_fin" name="ventana_fin" class="form-input time-picker"
+                                    value="18:00" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Capacidad Min (kg/m3) <span style="color:red">*</span></label>
+                                <input type="number" id="capacidad_min" name="capacidad_min" class="form-input"
+                                    value="1" min="0" step="0.1" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Capacidad Max (kg/m3) <span style="color:red">*</span></label>
+                                <input type="number" id="capacidad_max" name="capacidad_max" class="form-input"
+                                    value="10" min="0" step="0.1" required>
+                            </div>
+
+                            <!-- Advanced / Optional hidden by default? No, layout is wide enough now -->
+                            <div class="form-group">
+                                <label class="form-label">Ventana 2 Inicio (Opcional)</label>
+                                <input type="text" id="ventana2_inicio" name="ventana2_inicio"
+                                    class="form-input time-picker">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ventana 2 Fin (Opcional)</label>
+                                <input type="text" id="ventana2_fin" name="ventana2_fin" class="form-input time-picker">
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Tags -->
+                        <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="margin:0; color:var(--navy-main);">Tags Personalizados</h4>
+                                <button type="button" id="addTagBtn" class="btn-secondary"
+                                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                    <i class="ph-bold ph-plus"></i> Añadir Columna
+                                </button>
+                            </div>
+                            <div id="tagsContainer"></div>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn-primary">
+                            <span id="btnText">Generar Archivo Excel</span>
+                            <i class="ph-bold ph-download-simple"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- VEHICLE FORM AREA -->
+                <div id="vehicleFormArea" class="tab-content card" style="display: none;">
+                    <div class="card-header">
+                        <span class="card-title"><i class="ph-bold ph-garage"></i> Configuración de Flota</span>
+                    </div>
+
+                    <form id="generateVehiclesForm">
+                        <!-- Static Group -->
+                        <div class="vehicle-static-group">
+                            <h5 style="color: var(--dt-orange); margin: 0 0 1rem;">Grupo Principal</h5>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Tipo Vehículo <span style="color:red">*</span></label>
+                                    <select class="form-input v-type">
+                                        <option value="Camion" selected>Camión</option>
+                                        <option value="Auto">Auto</option>
+                                        <option value="Moto">Moto</option>
+                                        <option value="Bici">Bici</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Cantidad <span style="color:red">*</span></label>
+                                    <input type="number" class="form-input v-count" value="10" min="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Capacidad 1 <span style="color:red">*</span></label>
+                                    <input type="number" class="form-input v-cap1" value="1000" step="0.1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Capacidad 2</label>
+                                    <input type="number" class="form-input v-cap2" step="0.1" placeholder="Opcional">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Inicio Jornada <span style="color:red">*</span></label>
+                                    <input type="text" class="form-input time-picker v-start" value="08:00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fin Jornada <span style="color:red">*</span></label>
+                                    <input type="text" class="form-input time-picker v-end" value="18:00" required>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label class="form-label">Origen (Bodega) <span style="color:red">*</span></label>
+                                    <input type="text" class="form-input v-origin" placeholder="Ej: CD Central"
+                                        required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="additionalGroupsContainer" style="margin-top: 2rem;"></div>
+
+                        <!-- Dynamic Tags (Vehicles) -->
+                        <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="margin:0; color:var(--navy-main);">Tags Personalizados (Vehículos)</h4>
+                                <button type="button" id="addVehicleTagBtn" class="btn-secondary"
+                                    style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                    <i class="ph-bold ph-plus"></i> Añadir Columna
+                                </button>
+                            </div>
+                            <div id="vehicleTagsContainer"></div>
+                        </div>
+
+                        <button type="button" id="addVehicleGroupBtn" class="btn-secondary"
+                            style="margin-top: 1rem; border-style:dashed;">
+                            <i class="ph-bold ph-plus-circle"></i> Agregar otro tipo de vehículo
+                        </button>
+
+                        <button type="submit" class="btn-primary" style="margin-top: 2rem;">
+                            Generar Flota (.xlsx) <i class="ph-bold ph-truck"></i>
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- RIGHT PANEL: HELP/INFO -->
+            <aside class="help-panel">
+                <div class="card" style="background: white;">
+                    <div class="card-header">
+                        <span class="card-title"><i class="ph-duotone ph-info"></i> Información</span>
+                    </div>
+
+                    <ul class="info-list">
+                        <li class="info-item">
+                            <div class="info-icon"><i class="ph-bold ph-warehouse"></i></div>
+                            <div class="info-content">
+                                <h4>CD (obligatorio)</h4>
+                                <p>Debes declarar un CD que exista en la cuenta de PP que utilizarás.</p>
+                            </div>
+                        </li>
+                        <li class="info-item">
+                            <div class="info-icon"><i class="ph-bold ph-file-xlsx"></i></div>
+                            <div class="info-content">
+                                <h4>Formato Excel (.xlsx)</h4>
+                                <p>Compatible nativamente con la importación masiva de PlannerPro.</p>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div
+                        style="margin-top: 2rem; padding: 1rem; background: #F0FDFA; border-radius: var(--radius-md); border: 1px solid #CCFBF1;">
+                        <h5 style="margin:0 0 0.5rem; color: var(--dt-navy);">¿Necesitas Ayuda?</h5>
+                        <p style="margin:0; font-size: 0.85rem; color: var(--text-secondary);">Contacta al equipo Impact
+                            de Dispatchtrack Latam.</p>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- Templates Section -->
+    <template id="tagTemplate">
+        <div class="tag-card">
+            <button type="button" class="remove-tag-btn"><i class="ph-bold ph-x"></i></button>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Nombre Columna</label>
+                    <input type="text" class="form-input tag-header" placeholder="EJ: TIPO_CLIENTE" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Valores Aleatorios</label>
+                    <div class="tag-values-container" style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <input type="text" class="form-input tag-value" placeholder="Valor 1" required>
+                    </div>
+                    <button type="button" class="add-value-btn"
+                        style="margin-top:0.5rem; background:none; border:none; color:var(--dt-orange); cursor:pointer; font-size:0.8rem; font-weight:600;">+
+                        Agregar valor</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="vehicleGroupTemplate">
+        <div class="vehicle-group-card card"
+            style="margin-top:1.5rem; border:1px solid var(--border-color); padding:1.5rem; position:relative; animation: slideUp 0.3s;">
+            <button type="button" class="remove-group-btn"
+                style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: #EF4444; cursor: pointer;"><i
+                    class="ph-bold ph-x"></i></button>
+            <h5 style="color: var(--dt-orange); margin: 0 0 1rem;">Grupo Adicional</h5>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-input v-type">
+                        <option value="Camion">Camión</option>
+                        <option value="Auto">Auto</option>
+                        <option value="Moto">Moto</option>
+                        <option value="Bici">Bici</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cantidad</label>
+                    <input type="number" class="form-input v-count" value="5" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Capacidad 1</label>
+                    <input type="number" class="form-input v-cap1" required step="0.1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Origen</label>
+                    <input type="text" class="form-input v-origin" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Inicio</label>
+                    <input type="text" class="form-input time-picker v-start" value="08:00" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fin</label>
+                    <input type="text" class="form-input time-picker v-end" value="18:00" required>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+    <script>
+        // Simple helper to update header dynamically
+        function updateTitle(title, desc) {
+            document.getElementById('pageTitle').textContent = title;
+            document.getElementById('pageDesc').textContent = desc;
+
+            // Handle tab active state (already in script.js, but ensures UI sync)
+        }
+    </script>
+</body>
+
+</html>

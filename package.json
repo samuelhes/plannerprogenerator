@@ -1,0 +1,16 @@
+{
+    "name": "planner-pro-generator-v2",
+    "version": "2.6.3",
+    "description": "Full stack order generator for Planner Pro",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "xlsx": "^0.18.5",
+        "cors": "^2.8.5",
+        "body-parser": "^1.20.2",
+        "csv-parser": "^3.0.0"
+    }
+}
